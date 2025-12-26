@@ -12,7 +12,7 @@ import { withWhoop } from "../_lib/withWhoop.js";
  */
 export const POST = withWhoop(async (request, ctx) => {
   const body = ctx.json;
-  const { sleep, recovery, chronotypeOffsetHours, dayDate } = body;
+  const { sleep, recovery, chronotypeOffsetHours = 0.5, dayDate } = body;
 
   if (!sleep || !recovery) {
     return NextResponse.json(
@@ -23,7 +23,7 @@ export const POST = withWhoop(async (request, ctx) => {
 
   try {
     const result = buildEnergyScheduleFromWhoop(sleep, recovery, {
-      chronotypeOffsetHours: chronotypeOffsetHours ?? 0.5,
+      chronotypeOffsetHours,
       dayDate,
     });
 
