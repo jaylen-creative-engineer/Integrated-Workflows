@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { buildEnergyScheduleFromWhoop } from "../../../../energy/whoopEnergyModel.js";
+import { upsertEnergyEventsIfMissing } from "../../_lib/energyStorage.js";
 import { withWhoop } from "../../_lib/withWhoop.js";
-import { WhoopService } from "../../../services/whoopService.js";
+import { WhoopService } from "../../../../services/whoopService.js";
 
 /**
  * GET /api/energy/whoop
@@ -17,17 +18,9 @@ import { WhoopService } from "../../../services/whoopService.js";
  */
 export const GET = withWhoop(
   async (request, ctx) => {
-    const { searchParams } = new URL(request.url);
-
-    // Parse query params with defaults
-    const chronotypeOffsetHours = parseFloat(
-      searchParams.get("chronotypeOffsetHours") ?? "0.5"
-    );
-    const dayDateParam = searchParams.get("dayDate");
-
-    // Determine dayDate: use param or derive from Date.now()
     const now = new Date();
-    const dayDate = dayDateParam || WhoopService.formatDateYYYYMMDD(now);
+    const dayDate = WhoopService.formatDateYYYYMMDD(now);
+    const chronotypeOffsetHours = 0.5;
 
     // Service provided by withWhoop middleware
     const whoopService = ctx.whoopService;
@@ -46,6 +39,7 @@ export const GET = withWhoop(
 
     // Get sleep_id from recovery
     const sleepId = recovery.sleep_id;
+
     if (!sleepId) {
       return NextResponse.json(
         { error: "Recovery record does not contain sleep_id" },
@@ -72,7 +66,25 @@ export const GET = withWhoop(
         dayDate,
       });
 
-      return NextResponse.json(result);
+      const storageUserId = "self";
+      let storage = { status: "skipped" };
+
+      try {
+        storage = await upsertEnergyEventsIfMissing({
+          energy: result,
+          userId: storageUserId,
+          dayDate,
+          source: "whoop:get",
+        });
+      } catch (err) {
+        console.error("Energy storage error:", err);
+        return NextResponse.json(
+          { error: "Failed to persist energy events" },
+          { status: 502 }
+        );
+      }
+
+      return NextResponse.json({ energy: result, storage });
     } catch (err) {
       if (err.message?.includes("Invalid")) {
         return NextResponse.json({ error: err.message }, { status: 400 });

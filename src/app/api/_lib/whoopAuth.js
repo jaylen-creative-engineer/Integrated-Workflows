@@ -3,14 +3,28 @@ import crypto from "crypto";
 /**
  * In-memory token storage for single-user scenarios.
  * For multi-user production, extend to use a database.
+ * Uses globalThis to persist across Next.js hot reloads in development
  */
-const tokenStore = new Map();
+const getTokenStore = () => {
+  if (!globalThis.__whoopTokenStore) {
+    globalThis.__whoopTokenStore = new Map();
+  }
+  return globalThis.__whoopTokenStore;
+};
+const tokenStore = getTokenStore();
 
 /**
  * Pending OAuth state values for CSRF protection.
  * Maps state -> { expiresAt, redirectUri }
+ * Uses globalThis to persist across Next.js hot reloads in development
  */
-const pendingStates = new Map();
+const getPendingStates = () => {
+  if (!globalThis.__whoopPendingStates) {
+    globalThis.__whoopPendingStates = new Map();
+  }
+  return globalThis.__whoopPendingStates;
+};
+const pendingStates = getPendingStates();
 
 /**
  * Whoop OAuth configuration
@@ -66,8 +80,9 @@ export function initiateAuth(redirectUri = null) {
   const finalRedirectUri = redirectUri || config.redirectUri;
 
   // Store state with expiration (5 minutes)
+  const expiresAt = Date.now() + 5 * 60 * 1000;
   pendingStates.set(state, {
-    expiresAt: Date.now() + 5 * 60 * 1000,
+    expiresAt,
     redirectUri: finalRedirectUri,
   });
 
@@ -95,13 +110,15 @@ export function initiateAuth(redirectUri = null) {
  * @returns {boolean} - True if state is valid
  */
 function validateAndConsumeState(state) {
+  const now = Date.now();
   const pending = pendingStates.get(state);
+
   if (!pending) {
     return false;
   }
 
   // Check expiration
-  if (Date.now() > pending.expiresAt) {
+  if (now > pending.expiresAt) {
     pendingStates.delete(state);
     return false;
   }
@@ -127,18 +144,21 @@ export async function handleCallback(code, state) {
   const config = getConfig();
 
   // Exchange code for tokens
+  // OAuth 2.0 token endpoints typically expect application/x-www-form-urlencoded
+  const formData = new URLSearchParams({
+    grant_type: "authorization_code",
+    code: code,
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
+    redirect_uri: config.redirectUri,
+  });
+
   const response = await fetch(WHOOP_TOKEN_URL, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": "application/x-www-form-urlencoded",
     },
-    body: JSON.stringify({
-      grant_type: "authorization_code",
-      code: code,
-      client_id: config.clientId,
-      client_secret: config.clientSecret,
-      redirect_uri: config.redirectUri,
-    }),
+    body: formData.toString(),
   });
 
   if (!response.ok) {
@@ -211,18 +231,21 @@ async function refreshToken() {
   tokenStore.set("tokens", tokens);
 
   try {
+    // OAuth 2.0 token endpoints typically expect application/x-www-form-urlencoded
+    const formData = new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: tokens.refreshToken,
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
+      scope: "offline",
+    });
+
     const response = await fetch(WHOOP_TOKEN_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: JSON.stringify({
-        grant_type: "refresh_token",
-        refresh_token: tokens.refreshToken,
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
-        scope: "offline",
-      }),
+      body: formData.toString(),
     });
 
     if (!response.ok) {

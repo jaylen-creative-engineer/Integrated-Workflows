@@ -24,6 +24,16 @@ function requireIso(value, field) {
   return new Date(ms).toISOString();
 }
 
+function buildDayWindow(dayDate) {
+  const start = new Date(`${dayDate}T00:00:00.000Z`);
+  if (!Number.isFinite(start.getTime())) {
+    throw new Error(`Invalid dayDate: ${dayDate}`);
+  }
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 1);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
 /**
  * Maps energy model output into rows for the energy_events table.
  *
@@ -50,6 +60,31 @@ function toRows(energy, userId, source = "whoop") {
 }
 
 /**
+ * Checks if any energy events exist for a user within the given day.
+ *
+ * @param {{ userId: string, dayDate: string }} params
+ * @returns {Promise<boolean>}
+ */
+export async function hasEnergyEventsForDay({ userId, dayDate }) {
+  const supabase = getSupabaseAdmin();
+  const { start, end } = buildDayWindow(dayDate);
+
+  const { data, error } = await supabase
+    .from("energy_events")
+    .select("id")
+    .eq("user_id", userId)
+    .gte("start_at", start)
+    .lt("start_at", end)
+    .limit(1);
+
+  if (error) {
+    throw new Error(`Supabase day check failed: ${error.message}`);
+  }
+
+  return (data?.length || 0) > 0;
+}
+
+/**
  * Upserts energy events using unique key (user_id, start_at, category).
  *
  * @param {{ energy: any, userId: string, source?: string }} params
@@ -69,4 +104,31 @@ export async function upsertEnergyEvents({ energy, userId, source = "whoop" }) {
   }
 
   return { inserted: data?.length || 0, rows: data || [] };
+}
+
+/**
+ * Stores energy events for a day, skipping insert if already present.
+ *
+ * @param {{ energy: any, userId: string, dayDate: string, source?: string }} params
+ * @returns {Promise<{ status: "skipped" } | { status: "inserted", inserted: number, rows: any[] }>}
+ */
+export async function upsertEnergyEventsIfMissing({
+  energy,
+  userId,
+  dayDate,
+  source = "whoop",
+}) {
+  if (!dayDate) {
+    throw new Error("dayDate is required to upsert energy events");
+  }
+
+  const exists = await hasEnergyEventsForDay({ userId, dayDate });
+
+  if (exists) {
+    return { status: "skipped" };
+  }
+
+  const result = await upsertEnergyEvents({ energy, userId, source });
+
+  return { status: "inserted", ...result };
 }

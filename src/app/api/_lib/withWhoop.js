@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { getAccessToken } from "./whoopAuth.js";
-import { WhoopService } from "../../services/whoopService.js";
+import { WhoopService } from "../../../services/whoopService.js";
 
 /**
  * Constant-time string comparison to prevent timing attacks
@@ -114,9 +114,7 @@ export function withWhoop(handler, options = {}) {
         const accessToken = await getAccessToken();
 
         // Provide WhoopService instance that manages auth internally
-        const whoopService = new WhoopService({
-          getToken: async () => await getAccessToken(),
-        });
+        const whoopService = WhoopService.createWithToken(accessToken);
 
         // Create context with service instance and raw token if needed
         const handlerCtx = {

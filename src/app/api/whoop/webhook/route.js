@@ -8,10 +8,6 @@ import { WhoopService } from "../../../services/whoopService.js";
 const FAIL_OPEN_ON_STORAGE =
   (process.env.SUPABASE_ENERGY_FAIL_OPEN || "true").toLowerCase() !== "false";
 
-function resolveUserId(payloadUserId) {
-  return payloadUserId || process.env.WHOOP_USER_ID || "self";
-}
-
 /**
  * POST /api/whoop/webhook
  *
@@ -28,7 +24,7 @@ function resolveUserId(payloadUserId) {
  */
 export const POST = withWhoop(async (request, ctx) => {
   const body = ctx.json;
-  const { type, id, user_id, trace_id } = body;
+  const { type, id, trace_id } = body;
 
   if (!type) {
     return NextResponse.json(
@@ -64,7 +60,6 @@ export const POST = withWhoop(async (request, ctx) => {
   const dayDate = WhoopService.formatDateYYYYMMDD(new Date());
   const chronotypeOffsetHours = 0.5;
 
-  // Create service instance with static token for webhook handling
   const whoopService = new WhoopService({ accessToken });
 
   let sleep;
@@ -72,7 +67,6 @@ export const POST = withWhoop(async (request, ctx) => {
 
   try {
     if (type === "sleep.updated") {
-      // sleep.updated: id is the sleepId
       const sleepId = id;
       if (!sleepId) {
         return NextResponse.json(
@@ -81,7 +75,6 @@ export const POST = withWhoop(async (request, ctx) => {
         );
       }
 
-      // Fetch sleep
       const sleepResult = await whoopService.fetchSleepById(sleepId);
       if (sleepResult.error) {
         console.error(
@@ -95,7 +88,6 @@ export const POST = withWhoop(async (request, ctx) => {
 
       sleep = sleepResult.sleep;
 
-      // Fetch recovery from collection for today
       const recoveryResult = await whoopService.fetchRecoveryForDate(dayDate);
       if (recoveryResult.error) {
         return NextResponse.json(
@@ -106,7 +98,6 @@ export const POST = withWhoop(async (request, ctx) => {
 
       recovery = recoveryResult.recovery;
     } else if (type === "recovery.updated") {
-      // recovery.updated: fetch most recent recovery for today from collection
       const recoveryResult = await whoopService.fetchRecoveryForDate(dayDate);
       if (recoveryResult.error) {
         return NextResponse.json(
@@ -148,7 +139,7 @@ export const POST = withWhoop(async (request, ctx) => {
     });
 
     // Persist to Supabase (fail-open by default to keep webhook fast)
-    const storageUserId = resolveUserId(user_id);
+    const storageUserId = "self";
     let storage = { inserted: 0 };
     try {
       storage = await upsertEnergyEvents({
