@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { buildEnergyScheduleFromWhoop } from "../../../../energy/whoopEnergyModel.js";
-import { upsertEnergyEvents } from "../../_lib/energyStorage.js";
+import { upsertEnergyEventsIfMissing } from "../../_lib/energyStorage.js";
 import { getAccessToken } from "../../_lib/whoopAuth.js";
 import { withWhoop } from "../../_lib/withWhoop.js";
 import { WhoopService } from "../../../services/whoopService.js";
@@ -140,11 +140,12 @@ export const POST = withWhoop(async (request, ctx) => {
 
     // Persist to Supabase (fail-open by default to keep webhook fast)
     const storageUserId = "self";
-    let storage = { inserted: 0 };
+    let storage = { status: "skipped" };
     try {
-      storage = await upsertEnergyEvents({
+      storage = await upsertEnergyEventsIfMissing({
         energy,
         userId: storageUserId,
+        dayDate,
         source: "whoop:webhook",
       });
     } catch (err) {
