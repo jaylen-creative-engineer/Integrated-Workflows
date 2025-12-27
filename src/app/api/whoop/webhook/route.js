@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { buildEnergyScheduleFromWhoop } from "../../../../energy/whoopEnergyModel.js";
+import { upsertEnergyEvents } from "../../_lib/energyStorage.js";
 import { getAccessToken } from "../../_lib/whoopAuth.js";
 import { withWhoop } from "../../_lib/withWhoop.js";
 
 const WHOOP_API_BASE = "https://api.prod.whoop.com";
+const FAIL_OPEN_ON_STORAGE =
+  (process.env.SUPABASE_ENERGY_FAIL_OPEN || "true").toLowerCase() !== "false";
 
 /**
  * Formats a Date as YYYY-MM-DD string (UTC).
@@ -13,6 +16,10 @@ function formatDateYYYYMMDD(date) {
   const m = String(date.getUTCMonth() + 1).padStart(2, "0");
   const d = String(date.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+function resolveUserId(payloadUserId) {
+  return payloadUserId || process.env.WHOOP_USER_ID || "self";
 }
 
 /**
@@ -45,7 +52,10 @@ async function fetchRecoveryForDate(accessToken, dayDate) {
   const response = await whoopApiFetch(recoveryUrl, accessToken);
 
   if (!response.ok) {
-    return { error: `Recovery fetch failed: ${response.status}`, status: response.status };
+    return {
+      error: `Recovery fetch failed: ${response.status}`,
+      status: response.status,
+    };
   }
 
   const data = await response.json();
@@ -130,7 +140,9 @@ export const POST = withWhoop(async (request, ctx) => {
       );
 
       if (!sleepResponse.ok) {
-        console.error(`Failed to fetch sleep ${sleepId}: ${sleepResponse.status}`);
+        console.error(
+          `Failed to fetch sleep ${sleepId}: ${sleepResponse.status}`
+        );
         return NextResponse.json(
           { error: `Failed to fetch sleep: ${sleepResponse.status}` },
           { status: sleepResponse.status === 404 ? 404 : 502 }
@@ -177,7 +189,9 @@ export const POST = withWhoop(async (request, ctx) => {
       );
 
       if (!sleepResponse.ok) {
-        console.error(`Failed to fetch sleep ${sleepId}: ${sleepResponse.status}`);
+        console.error(
+          `Failed to fetch sleep ${sleepId}: ${sleepResponse.status}`
+        );
         return NextResponse.json(
           { error: `Failed to fetch sleep: ${sleepResponse.status}` },
           { status: sleepResponse.status === 404 ? 404 : 502 }
@@ -193,15 +207,34 @@ export const POST = withWhoop(async (request, ctx) => {
       dayDate,
     });
 
-    // Return success with energy schedule
-    // In production, you might instead trigger downstream side-effects
-    // (e.g., create Notion page) and return a minimal response
+    // Persist to Supabase (fail-open by default to keep webhook fast)
+    const storageUserId = resolveUserId(user_id);
+    let storage = { inserted: 0 };
+    try {
+      storage = await upsertEnergyEvents({
+        energy,
+        userId: storageUserId,
+        source: "whoop:webhook",
+      });
+    } catch (err) {
+      console.error("Energy storage error:", err);
+      if (!FAIL_OPEN_ON_STORAGE) {
+        return NextResponse.json(
+          { error: "Failed to persist energy events", trace_id },
+          { status: 502 }
+        );
+      }
+      storage = { error: err.message };
+    }
+
+    // Return success with energy schedule + storage status
     return NextResponse.json({
       status: "processed",
       trace_id,
-      user_id,
+      user_id: storageUserId,
       event_type: type,
       energy,
+      storage,
     });
   } catch (err) {
     if (err.message?.includes("Invalid")) {
@@ -218,4 +251,3 @@ export const POST = withWhoop(async (request, ctx) => {
     );
   }
 });
-

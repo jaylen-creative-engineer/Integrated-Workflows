@@ -124,7 +124,7 @@ async function whoopFetch(url, options = {}, accessToken) {
 export function withWhoop(handler, options = {}) {
   const {
     mode = "inbound",
-    secretEnvVar = "WHOOP_WEBHOOK_SECRET",
+    secretEnvVar = "WHOOP_CLIENT_SECRET",
     toleranceSeconds = Number.parseInt(
       process.env.WHOOP_WEBHOOK_TOLERANCE_SECONDS || "300",
       10
