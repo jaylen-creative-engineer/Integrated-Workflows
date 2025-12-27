@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { getAccessToken } from "./whoopAuth.js";
+import { WhoopService } from "../../services/whoopService.js";
 
 /**
  * Constant-time string comparison to prevent timing attacks
@@ -69,34 +70,6 @@ function validateWhoopSignature(request, rawBody, secret, toleranceSeconds) {
 }
 
 /**
- * Makes an authenticated request to the Whoop API.
- * Automatically includes Bearer token and handles token refresh on 401.
- *
- * @param {string} url - API endpoint URL (can be relative to Whoop API base)
- * @param {RequestInit} options - Fetch options
- * @param {string} accessToken - Access token to use
- * @returns {Promise<Response>}
- */
-async function whoopFetch(url, options = {}, accessToken) {
-  // If URL is relative, prepend Whoop API base URL
-  const baseUrl = "https://api.prod.whoop.com";
-  const fullUrl = url.startsWith("http") ? url : `${baseUrl}${url}`;
-
-  // Add Authorization header
-  const headers = new Headers(options.headers || {});
-  headers.set("Authorization", `Bearer ${accessToken}`);
-
-  // Make request
-  const response = await fetch(fullUrl, {
-    ...options,
-    headers,
-  });
-
-  // If 401, token might be expired - let caller handle refresh
-  return response;
-}
-
-/**
  * Wraps a Next.js API route handler to validate WHOOP webhook signatures (inbound)
  * or provide OAuth authentication for outbound API requests.
  *
@@ -140,41 +113,16 @@ export function withWhoop(handler, options = {}) {
         // Get access token (will refresh if needed)
         const accessToken = await getAccessToken();
 
-        // Create context with authenticated fetch helper
+        // Provide WhoopService instance that manages auth internally
+        const whoopService = new WhoopService({
+          getToken: async () => await getAccessToken(),
+        });
+
+        // Create context with service instance and raw token if needed
         const handlerCtx = {
           ...ctx,
           accessToken,
-          /**
-           * Helper function to make authenticated requests to Whoop API.
-           * Automatically includes Bearer token.
-           *
-           * @param {string} url - API endpoint (relative or absolute)
-           * @param {RequestInit} options - Fetch options
-           * @returns {Promise<Response>}
-           */
-          whoopFetch: async (url, fetchOptions = {}) => {
-            let token = accessToken;
-            let response = await whoopFetch(url, fetchOptions, token);
-
-            // If 401, try refreshing token once and retry
-            if (response.status === 401 && requireAuth) {
-              try {
-                const refreshedToken = await getAccessToken();
-                if (refreshedToken !== token) {
-                  response = await whoopFetch(
-                    url,
-                    fetchOptions,
-                    refreshedToken
-                  );
-                }
-              } catch (refreshError) {
-                console.error("Token refresh failed:", refreshError);
-                // Return original 401 response
-              }
-            }
-
-            return response;
-          },
+          whoopService,
         };
 
         return handler(request, handlerCtx);

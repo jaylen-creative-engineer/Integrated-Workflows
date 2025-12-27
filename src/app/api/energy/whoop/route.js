@@ -1,16 +1,7 @@
 import { NextResponse } from "next/server";
 import { buildEnergyScheduleFromWhoop } from "../../../../energy/whoopEnergyModel.js";
 import { withWhoop } from "../../_lib/withWhoop.js";
-
-/**
- * Formats a Date as YYYY-MM-DD string (UTC).
- */
-function formatDateYYYYMMDD(date) {
-  const y = date.getUTCFullYear();
-  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(date.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
+import { WhoopService } from "../../../services/whoopService.js";
 
 /**
  * GET /api/energy/whoop
@@ -36,52 +27,22 @@ export const GET = withWhoop(
 
     // Determine dayDate: use param or derive from Date.now()
     const now = new Date();
-    const dayDate = dayDateParam || formatDateYYYYMMDD(now);
+    const dayDate = dayDateParam || WhoopService.formatDateYYYYMMDD(now);
 
-    // Build UTC window for the day
-    const startOfDay = `${dayDate}T00:00:00.000Z`;
-    const nextDay = new Date(`${dayDate}T00:00:00.000Z`);
-    nextDay.setUTCDate(nextDay.getUTCDate() + 1);
-    const endOfDay = nextDay.toISOString();
+    // Service provided by withWhoop middleware
+    const whoopService = ctx.whoopService;
 
     // Fetch most recent recovery from collection
-    const recoveryUrl = `/developer/v2/recovery?limit=1&start=${encodeURIComponent(
-      startOfDay
-    )}&end=${encodeURIComponent(endOfDay)}`;
+    const recoveryResult = await whoopService.fetchRecoveryForDate(dayDate);
 
-    const recoveryResponse = await ctx.whoopFetch(recoveryUrl);
-
-    if (recoveryResponse.status === 429) {
+    if (recoveryResult.error) {
       return NextResponse.json(
-        { error: "WHOOP API rate limit exceeded. Please try again later." },
-        { status: 429 }
+        { error: recoveryResult.error },
+        { status: recoveryResult.status }
       );
     }
 
-    if (!recoveryResponse.ok) {
-      const errorText = await recoveryResponse.text();
-      console.error(
-        `WHOOP API error (recovery collection): ${recoveryResponse.status}`,
-        errorText
-      );
-      return NextResponse.json(
-        {
-          error: `WHOOP API error fetching recovery: ${recoveryResponse.status}`,
-        },
-        { status: recoveryResponse.status }
-      );
-    }
-
-    const recoveryData = await recoveryResponse.json();
-
-    if (!recoveryData.records || recoveryData.records.length === 0) {
-      return NextResponse.json(
-        { error: `No recovery found for date: ${dayDate}` },
-        { status: 404 }
-      );
-    }
-
-    const recovery = recoveryData.records[0];
+    const recovery = recoveryResult.recovery;
 
     // Get sleep_id from recovery
     const sleepId = recovery.sleep_id;
@@ -93,37 +54,16 @@ export const GET = withWhoop(
     }
 
     // Fetch sleep by ID
-    const sleepResponse = await ctx.whoopFetch(
-      `/developer/v2/activity/sleep/${sleepId}`
-    );
+    const sleepResult = await whoopService.fetchSleepById(sleepId);
 
-    if (sleepResponse.status === 404) {
+    if (sleepResult.error) {
       return NextResponse.json(
-        { error: `Sleep record not found: ${sleepId}` },
-        { status: 404 }
+        { error: sleepResult.error },
+        { status: sleepResult.status }
       );
     }
 
-    if (sleepResponse.status === 429) {
-      return NextResponse.json(
-        { error: "WHOOP API rate limit exceeded. Please try again later." },
-        { status: 429 }
-      );
-    }
-
-    if (!sleepResponse.ok) {
-      const errorText = await sleepResponse.text();
-      console.error(
-        `WHOOP API error (sleep): ${sleepResponse.status}`,
-        errorText
-      );
-      return NextResponse.json(
-        { error: `WHOOP API error fetching sleep: ${sleepResponse.status}` },
-        { status: sleepResponse.status }
-      );
-    }
-
-    const sleep = await sleepResponse.json();
+    const sleep = sleepResult.sleep;
 
     // Compute energy schedule
     try {
@@ -147,4 +87,3 @@ export const GET = withWhoop(
   },
   { mode: "outbound" }
 );
-
