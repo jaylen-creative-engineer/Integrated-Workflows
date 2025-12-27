@@ -1,13 +1,24 @@
 -- Migration: energy_events table for WHOOP-derived energy schedule
 -- Keeps per-segment windows (peaks, dips, etc.) with upsert-friendly key.
 
-create type if not exists energy_event_category as enum (
-  'peak',
-  'dip',
-  'groggy',
-  'wind_down',
-  'melatonin'
-);
+-- Create enum type if it doesn't exist (PostgreSQL doesn't support CREATE TYPE IF NOT EXISTS)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    INNER JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE t.typname = 'energy_event_category' AND n.nspname = 'public'
+  ) THEN
+    CREATE TYPE energy_event_category AS ENUM (
+      'peak',
+      'dip',
+      'groggy',
+      'wind_down',
+      'melatonin'
+    );
+  END IF;
+END $$;
 
 create table if not exists public.energy_events (
   id uuid primary key default gen_random_uuid(),

@@ -114,7 +114,7 @@ export function withWhoop(handler, options = {}) {
         const accessToken = await getAccessToken();
 
         // Provide WhoopService instance that manages auth internally
-        const whoopService = WhoopService.createWithToken(accessToken);
+        const whoopService = new WhoopService({ accessToken });
 
         // Create context with service instance and raw token if needed
         const handlerCtx = {
