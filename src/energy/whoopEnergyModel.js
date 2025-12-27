@@ -42,6 +42,39 @@ function formatIsoWithOffset(utcMs, offsetMinutes) {
   return `${y}-${mo}-${d}T${h}:${mi}:${s}.${ms}${sign}${oh}:${om}`;
 }
 
+function format12HourEST(utcMs) {
+  // Convert UTC timestamp to US EST/EDT timezone and format as 12-hour time
+  const estDate = new Date(utcMs);
+  
+  // Use Intl.DateTimeFormat to format in EST/EDT timezone
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+  
+  const parts = formatter.formatToParts(estDate);
+  const weekday = parts.find(p => p.type === 'weekday')?.value;
+  const month = parts.find(p => p.type === 'month')?.value;
+  const day = parts.find(p => p.type === 'day')?.value;
+  const hour = parts.find(p => p.type === 'hour')?.value;
+  const minute = parts.find(p => p.type === 'minute')?.value;
+  const dayPeriod = parts.find(p => p.type === 'dayPeriod')?.value;
+  
+  // Add ordinal suffix (1st, 2nd, 3rd, 4th, etc.)
+  const dayNum = parseInt(day);
+  let suffix = 'th';
+  if (dayNum % 10 === 1 && dayNum % 100 !== 11) suffix = 'st';
+  else if (dayNum % 10 === 2 && dayNum % 100 !== 12) suffix = 'nd';
+  else if (dayNum % 10 === 3 && dayNum % 100 !== 13) suffix = 'rd';
+  
+  return `${weekday}, ${month} ${day}${suffix} ${hour}:${minute}${dayPeriod.toUpperCase()}`;
+}
+
 function getNumber(pathValue, fallback = 0) {
   const n = Number(pathValue);
   return Number.isFinite(n) ? n : fallback;
@@ -49,10 +82,11 @@ function getNumber(pathValue, fallback = 0) {
 
 /**
  * @typedef {"groggy"|"peak"|"dip"|"wind_down"|"melatonin"} EnergySegmentType
- * @typedef {{label:string,type:EnergySegmentType,start:string,end:string,energy:number}} EnergySegment
+ * @typedef {{label:string,type:EnergySegmentType,start:string,end:string,start_iso?:string,end_iso?:string,energy:number}} EnergySegment
  * @typedef {"push"|"balanced"|"conserve"} DayMode
  * @typedef {{
  *  wakeTime: string,
+ *  wakeTime_iso?: string,
  *  sleepDurationHours: number,
  *  sleepDebtHours: number,
  *  sleepPerf: number,
@@ -128,6 +162,8 @@ export function buildEnergyScheduleFromWhoop(sleep, recovery, config = {}) {
   const afternoonDipDurationMs =
     (baseAfternoonDipH * lowEnergyExtendRatio + peakDelayHours) * HOUR_MS;
   const eveningPeakDurationMs = baseEveningPeakH * peakShrinkRatio * HOUR_MS;
+
+  // Wind-down: modeled duration (no artificial cap)
   const windDownDurationMs = baseWindDownH * HOUR_MS;
 
   const segmentsUtc = [];
@@ -146,9 +182,10 @@ export function buildEnergyScheduleFromWhoop(sleep, recovery, config = {}) {
   pushSeg("Evening Peak", "peak", eveningPeakDurationMs);
   pushSeg("Wind-Down", "wind_down", windDownDurationMs);
 
+  // Melatonin window: 80% of wind-down duration immediately after wind-down (sleep start not required)
   const windDownSeg = segmentsUtc[segmentsUtc.length - 1];
-  const melatoninStartUtcMs = windDownSeg.startUtcMs - 1.5 * HOUR_MS;
-  const melatoninEndUtcMs = windDownSeg.endUtcMs;
+  const melatoninStartUtcMs = windDownSeg.endUtcMs;
+  const melatoninEndUtcMs = melatoninStartUtcMs + 0.8 * windDownDurationMs;
 
   // Energy scoring (0–1)
   const baseE = {
@@ -183,36 +220,62 @@ export function buildEnergyScheduleFromWhoop(sleep, recovery, config = {}) {
   /** @type {EnergySegment[]} */
   const segments = segmentsUtc.map((s) => {
     const isLowEnergy = s.type !== "peak";
+    const startIso = formatIsoWithOffset(s.startUtcMs, timezoneOffsetMinutes);
+    const endIso = formatIsoWithOffset(s.endUtcMs, timezoneOffsetMinutes);
+    const startFormatted = format12HourEST(s.startUtcMs);
+    const endFormatted = format12HourEST(s.endUtcMs);
+    
     return {
       label: s.label,
       type: s.type,
-      start: formatIsoWithOffset(s.startUtcMs, timezoneOffsetMinutes),
-      end: formatIsoWithOffset(s.endUtcMs, timezoneOffsetMinutes),
+      start: startFormatted,  // Formatted for API response
+      end: endFormatted,      // Formatted for API response
+      start_iso: startIso,    // ISO for database storage
+      end_iso: endIso,        // ISO for database storage
       energy: scaleEnergy(baseE[s.type], isLowEnergy),
     };
   });
 
-  // Overlapping "melatonin window"
+  // Melatonin window: 80% of wind-down duration immediately after wind-down
+  const melatoninStartIso = formatIsoWithOffset(melatoninStartUtcMs, timezoneOffsetMinutes);
+  const melatoninEndIso = formatIsoWithOffset(melatoninEndUtcMs, timezoneOffsetMinutes);
   segments.push({
     label: "Melatonin Window",
     type: "melatonin",
-    start: formatIsoWithOffset(melatoninStartUtcMs, timezoneOffsetMinutes),
-    end: formatIsoWithOffset(melatoninEndUtcMs, timezoneOffsetMinutes),
+    start: format12HourEST(melatoninStartUtcMs),
+    end: format12HourEST(melatoninEndUtcMs),
+    start_iso: melatoninStartIso,
+    end_iso: melatoninEndIso,
     energy: scaleEnergy(baseE.melatonin, true),
   });
 
-  // Validate segment contiguity (excluding melatonin which overlaps)
-  const mainSegments = segments.filter((s) => s.type !== "melatonin");
+  // Validate segment contiguity (includes melatonin as the final segment)
+  // Use ISO timestamps for validation since formatted strings can't be parsed as dates
+  const mainSegments = segments;
   for (let i = 0; i < mainSegments.length - 1; i++) {
     const curr = mainSegments[i];
     const next = mainSegments[i + 1];
-    const currEnd = new Date(curr.end).getTime();
-    const nextStart = new Date(next.start).getTime();
+    const currEnd = new Date(curr.end_iso).getTime();
+    const nextStart = new Date(next.start_iso).getTime();
     const gap = nextStart - currEnd;
 
     if (Math.abs(gap) > 1000) {
       throw new Error(
-        `Segments not contiguous: ${curr.label}.end (${curr.end}) != ${next.label}.start (${next.start}), gap: ${gap}ms`
+        `Segments not contiguous: ${curr.label}.end (${curr.end_iso}) != ${next.label}.start (${next.start_iso}), gap: ${gap}ms`
+      );
+    }
+  }
+
+  // Validate melatonin is contiguous with wind-down (melatonin starts when wind-down ends)
+  const windDownSegFormatted = segments.find((s) => s.type === "wind_down");
+  const melatoninSeg = segments.find((s) => s.type === "melatonin");
+  if (windDownSegFormatted && melatoninSeg) {
+    const windDownEnd = new Date(windDownSegFormatted.end_iso).getTime();
+    const melatoninStart = new Date(melatoninSeg.start_iso).getTime();
+    const gap = Math.abs(melatoninStart - windDownEnd);
+    if (gap > 1000) {
+      throw new Error(
+        `Melatonin not contiguous with wind-down: wind-down ends at ${windDownSegFormatted.end_iso}, melatonin starts at ${melatoninSeg.start_iso}, gap: ${gap}ms`
       );
     }
   }
@@ -226,8 +289,12 @@ export function buildEnergyScheduleFromWhoop(sleep, recovery, config = {}) {
     }
   }
 
+  const wakeTimeIso = formatIsoWithOffset(wakeUtcMs, timezoneOffsetMinutes);
+  const wakeTimeFormatted = format12HourEST(wakeUtcMs);
+  
   return {
-    wakeTime: formatIsoWithOffset(wakeUtcMs, timezoneOffsetMinutes),
+    wakeTime: wakeTimeFormatted,  // Formatted for API response
+    wakeTime_iso: wakeTimeIso,    // ISO for database storage
     sleepDurationHours,
     sleepDebtHours,
     sleepPerf,

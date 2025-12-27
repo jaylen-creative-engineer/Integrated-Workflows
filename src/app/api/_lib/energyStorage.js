@@ -52,8 +52,10 @@ function toRows(energy, userId, source = "whoop") {
   return energy.segments.map((segment) => ({
     user_id: userId,
     category: normalizeCategory(segment.type),
-    start_at: requireIso(segment.start, "segment.start"),
-    end_at: requireIso(segment.end, "segment.end"),
+    start_at: requireIso(segment.start_iso || segment.start, "segment.start"),
+    end_at: requireIso(segment.end_iso || segment.end, "segment.end"),
+    start_at_formatted: segment.start, // Formatted string for display
+    end_at_formatted: segment.end, // Formatted string for display
     label: segment.label || segment.type,
     source,
   }));
