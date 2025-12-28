@@ -74,3 +74,28 @@ where user_id = '<your user>'
   and start_at <  '<tomorrow start ISO>'
 order by start_at;
 ```
+
+## Creative OS Agent POC (Hybrid TS)
+
+New files:
+- `tsconfig.json` / `next-env.d.ts` enable TypeScript with `allowJs`.
+- `src/agents/*.ts` scaffold root + domain agents (Projects, Tasks, Meetings, Ideas).
+- `src/app/api/agents/creative-os/route.ts` POST handler for the root agent.
+
+Route behavior:
+- Defaults to `dryRun: true`, returns available tool names without calling the LLM.
+- To actually invoke the agent, set `GOOGLE_GENAI_API_KEY` and send `dryRun: false`.
+
+Example (dry run):
+```bash
+curl -X POST http://localhost:3000/api/agents/creative-os \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"Draft a daily brief for today"}'
+```
+
+Example (live, requires `GOOGLE_GENAI_API_KEY`):
+```bash
+curl -X POST http://localhost:3000/api/agents/creative-os \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"Draft a daily brief for today","dryRun":false}'
+```
