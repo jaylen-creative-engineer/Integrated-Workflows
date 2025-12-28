@@ -3,7 +3,7 @@ import { buildEnergyScheduleFromWhoop } from "../../../../energy/whoopEnergyMode
 import { upsertEnergyEventsIfMissing } from "../../_lib/energyStorage.js";
 import { getAccessToken } from "../../_lib/whoopAuth.js";
 import { withWhoop } from "../../_lib/withWhoop.js";
-import { WhoopService } from "../../../services/whoopService.js";
+import { WhoopService } from "../../../../services/whoopService.js";
 
 const FAIL_OPEN_ON_STORAGE =
   (process.env.SUPABASE_ENERGY_FAIL_OPEN || "true").toLowerCase() !== "false";
