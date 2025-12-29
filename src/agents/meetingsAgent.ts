@@ -1,13 +1,25 @@
 import { FunctionTool } from '@google/adk';
-import { z } from 'zod';
+import { Schema, Type } from '@google/genai';
+
+type MeetingsParams = {
+	date: string;
+};
+
+const meetingsSchema: Schema = {
+	type: Type.OBJECT,
+	properties: {
+		date: { type: Type.STRING },
+	},
+	required: ['date'],
+	additionalProperties: false,
+};
 
 export const buildMeetingContextsForDay = new FunctionTool({
 	name: 'build_meeting_contexts_for_day',
 	description: 'Build meeting context docs for a date, mapped to product briefs and tasks.',
-	parameters: z.object({
-		date: z.string().describe('ISO date (YYYY-MM-DD)'),
-	}),
-	execute: async ({ date }) => {
+	parameters: meetingsSchema,
+	execute: async (input) => {
+		const { date } = input as MeetingsParams;
 		const meetings = [
 			{
 				title: 'QA Sync',
