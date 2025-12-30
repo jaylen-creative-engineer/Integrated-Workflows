@@ -134,3 +134,125 @@ export async function upsertEnergyEventsIfMissing({
 
   return { status: "inserted", ...result };
 }
+
+/**
+ * @typedef {Object} EnergyEvent
+ * @property {string} id - UUID of the event
+ * @property {string} user_id - User identifier
+ * @property {string} category - Energy category (peak, dip, groggy, wind_down, melatonin)
+ * @property {string} start_at - ISO timestamp for segment start
+ * @property {string} end_at - ISO timestamp for segment end
+ * @property {string} start_at_formatted - Human-readable start time
+ * @property {string} end_at_formatted - Human-readable end time
+ * @property {string} label - Human-readable label (e.g., "Morning Peak")
+ * @property {string} source - Data source (e.g., "whoop")
+ */
+
+/**
+ * @typedef {Object} EnergySchedule
+ * @property {string} date - The date (YYYY-MM-DD)
+ * @property {EnergyEvent[]} segments - Array of energy segments ordered by start time
+ * @property {EnergyEvent|null} currentSegment - The segment that contains the current time
+ * @property {EnergyEvent|null} nextSegment - The next upcoming segment
+ */
+
+/**
+ * Fetches all energy events for a user on a specific day.
+ *
+ * @param {{ userId: string, dayDate: string }} params
+ * @returns {Promise<EnergyEvent[]>}
+ */
+export async function getEnergyEventsForDay({ userId, dayDate }) {
+  const supabase = getSupabaseAdmin();
+  const { start, end } = buildDayWindow(dayDate);
+
+  const { data, error } = await supabase
+    .from("energy_events")
+    .select("*")
+    .eq("user_id", userId)
+    .gte("start_at", start)
+    .lt("start_at", end)
+    .order("start_at", { ascending: true });
+
+  if (error) {
+    throw new Error(`Supabase query failed: ${error.message}`);
+  }
+
+  return data || [];
+}
+
+/**
+ * Finds the current and next energy segment based on current time.
+ *
+ * @param {EnergyEvent[]} segments - Array of energy segments
+ * @returns {{ currentSegment: EnergyEvent|null, nextSegment: EnergyEvent|null }}
+ */
+function findCurrentAndNextSegment(segments) {
+  const now = new Date();
+  let currentSegment = null;
+  let nextSegment = null;
+
+  for (let i = 0; i < segments.length; i++) {
+    const segment = segments[i];
+    const startAt = new Date(segment.start_at);
+    const endAt = new Date(segment.end_at);
+
+    if (now >= startAt && now < endAt) {
+      currentSegment = segment;
+      nextSegment = segments[i + 1] || null;
+      break;
+    } else if (now < startAt && !nextSegment) {
+      nextSegment = segment;
+    }
+  }
+
+  return { currentSegment, nextSegment };
+}
+
+/**
+ * Gets the energy schedule for today, including current and next segments.
+ *
+ * @param {string} userId - User identifier
+ * @returns {Promise<EnergySchedule|null>} - Returns null if no events found for today
+ */
+export async function getTodayEnergySchedule(userId) {
+  const today = new Date().toISOString().split("T")[0];
+  const segments = await getEnergyEventsForDay({ userId, dayDate: today });
+
+  if (segments.length === 0) {
+    return null;
+  }
+
+  const { currentSegment, nextSegment } = findCurrentAndNextSegment(segments);
+
+  return {
+    date: today,
+    segments,
+    currentSegment,
+    nextSegment,
+  };
+}
+
+/**
+ * Gets the energy schedule for a specific date.
+ *
+ * @param {{ userId: string, dayDate: string }} params
+ * @returns {Promise<EnergySchedule|null>} - Returns null if no events found
+ */
+export async function getEnergyScheduleForDate({ userId, dayDate }) {
+  const segments = await getEnergyEventsForDay({ userId, dayDate });
+
+  if (segments.length === 0) {
+    return null;
+  }
+
+  // For past/future dates, current/next are less relevant but we still compute them
+  const { currentSegment, nextSegment } = findCurrentAndNextSegment(segments);
+
+  return {
+    date: dayDate,
+    segments,
+    currentSegment,
+    nextSegment,
+  };
+}

@@ -3,6 +3,7 @@ import { buildEnergyScheduleFromWhoop } from "../../../../energy/whoopEnergyMode
 import { upsertEnergyEventsIfMissing } from "../../_lib/energyStorage.js";
 import { withWhoop } from "../../_lib/withWhoop.js";
 import { WhoopService } from "../../../../services/whoopService.js";
+import { APP_USER_ID } from "../../../../config/userConfig.js";
 
 /**
  * GET /api/energy/whoop
@@ -66,7 +67,7 @@ export const GET = withWhoop(
         dayDate,
       });
 
-      const storageUserId = "self";
+      const storageUserId = APP_USER_ID;
       let storage = { status: "skipped" };
 
       try {

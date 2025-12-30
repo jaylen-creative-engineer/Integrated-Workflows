@@ -4,6 +4,7 @@ import { upsertEnergyEventsIfMissing } from "../../_lib/energyStorage.js";
 import { getAccessToken } from "../../_lib/whoopAuth.js";
 import { withWhoop } from "../../_lib/withWhoop.js";
 import { WhoopService } from "../../../../services/whoopService.js";
+import { APP_USER_ID } from "../../../../config/userConfig.js";
 
 const FAIL_OPEN_ON_STORAGE =
   (process.env.SUPABASE_ENERGY_FAIL_OPEN || "true").toLowerCase() !== "false";
@@ -139,7 +140,7 @@ export const POST = withWhoop(async (request, ctx) => {
     });
 
     // Persist to Supabase (fail-open by default to keep webhook fast)
-    const storageUserId = "self";
+    const storageUserId = APP_USER_ID;
     let storage = { status: "skipped" };
     try {
       storage = await upsertEnergyEventsIfMissing({

@@ -8,6 +8,7 @@ import {
   extractAgentOutput,
   SessionStatus,
 } from "../../_lib/agentSessionStorage.js";
+import { APP_USER_ID } from "../../../../config/userConfig.js";
 
 type RequestPayload = {
   prompt?: string;
@@ -25,7 +26,6 @@ type ParsedRequest = {
 
 const DEFAULT_PROMPT =
   "Generate a daily brief with tasks, meetings, and energy map.";
-const DEFAULT_USER_ID = "self";
 const APP_NAME = "creative-os-poc";
 const MAX_LLM_CALLS = 4;
 
@@ -42,7 +42,7 @@ async function parseRequest(request: NextRequest): Promise<ParsedRequest> {
 
   return {
     prompt: body.prompt ?? DEFAULT_PROMPT,
-    userId: body.userId ?? DEFAULT_USER_ID,
+    userId: body.userId ?? APP_USER_ID,
     sessionId: body.sessionId, // undefined if not provided, will be generated
     dryRun: body.dryRun ?? false,
   };
