@@ -1,5 +1,4 @@
 import { InMemoryRunner } from "@google/adk";
-import { allDomainTools, rootAgent } from "../../../../agents/rootAgent.js";
 import { NextRequest, NextResponse } from "next/server.js";
 import {
   getOrCreateSession,
@@ -7,8 +6,9 @@ import {
   updateSessionOutput,
   extractAgentOutput,
   SessionStatus,
-} from "../../_lib/agentSessionStorage.js";
-import { APP_USER_ID } from "../../../../config/userConfig.js";
+} from "../../_lib/storage/agentSessionStorage.js";
+import { allDomainTools, rootAgent } from "@/agents";
+import { APP_USER_ID } from "@/config";
 
 type RequestPayload = {
   prompt?: string;

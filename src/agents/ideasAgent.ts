@@ -75,7 +75,6 @@ const captureIdeaSchema: Schema = {
     },
   },
   required: ["rawText"],
-  additionalProperties: false,
 };
 
 const updateIdeaSchema: Schema = {
@@ -104,7 +103,6 @@ const updateIdeaSchema: Schema = {
     },
   },
   required: ["ideaId"],
-  additionalProperties: false,
 };
 
 const queryIdeasSchema: Schema = {
@@ -124,7 +122,6 @@ const queryIdeasSchema: Schema = {
       description: "Maximum number of results to return. Defaults to 20",
     },
   },
-  additionalProperties: false,
 };
 
 const getIdeaSchema: Schema = {
@@ -136,7 +133,6 @@ const getIdeaSchema: Schema = {
     },
   },
   required: ["ideaId"],
-  additionalProperties: false,
 };
 
 // ============================================================================
@@ -419,7 +415,6 @@ export const getRecentIdeasTool = new FunctionTool({
         description: "Maximum number of ideas to return. Defaults to 10",
       },
     },
-    additionalProperties: false,
   },
   execute: async (input) => {
     const { limit = 10 } = input as { limit?: number };

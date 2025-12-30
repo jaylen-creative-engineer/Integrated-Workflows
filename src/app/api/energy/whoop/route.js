@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { buildEnergyScheduleFromWhoop } from "../../../../energy/whoopEnergyModel.js";
-import { upsertEnergyEventsIfMissing } from "../../_lib/energyStorage.js";
-import { withWhoop } from "../../_lib/withWhoop.js";
+import { upsertEnergyEventsIfMissing } from "../../_lib/storage/energyStorage.js";
+import { withWhoop } from "../../_lib/whoop/withWhoop.js";
 import { WhoopService } from "../../../../services/whoopService.js";
-import { APP_USER_ID } from "../../../../config/userConfig.js";
+import { APP_USER_ID } from "@/config";
 
 /**
  * GET /api/energy/whoop

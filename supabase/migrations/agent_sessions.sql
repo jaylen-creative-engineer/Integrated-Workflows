@@ -85,3 +85,4 @@ create trigger agent_sessions_updated_at_trigger
   for each row
   execute function update_agent_sessions_updated_at();
 
+

@@ -13,6 +13,7 @@ import {
   GameplanCategory,
   type GameplanStatusValue,
   type GameplanCategoryValue,
+  type GameplanPriorityValue,
 } from "../config/notionConfig.js";
 
 // ============================================================================
@@ -121,10 +122,7 @@ const blockBuilders = {
     divider: {},
   }),
 
-  callout: (
-    text: string,
-    emoji: string = "💡"
-  ): BlockObjectRequest => ({
+  callout: (text: string, emoji: string = "💡"): BlockObjectRequest => ({
     object: "block",
     type: "callout",
     callout: {
@@ -149,7 +147,9 @@ const blockBuilders = {
 /**
  * Generate content blocks for daily gameplan
  */
-function buildGameplanContent(params: CreateDailyGameplanParams): BlockObjectRequest[] {
+function buildGameplanContent(
+  params: CreateDailyGameplanParams
+): BlockObjectRequest[] {
   const blocks: BlockObjectRequest[] = [];
 
   // Summary section at top
@@ -317,7 +317,8 @@ const createDailyGameplanSchema: Schema = {
           title: { type: Type.STRING, description: "Task title" },
           priority: {
             type: Type.STRING,
-            description: "Task priority (Very Low, Low, Medium, High, Very High)",
+            description:
+              "Task priority (Very Low, Low, Medium, High, Very High)",
           },
           dueDate: {
             type: Type.STRING,
@@ -382,7 +383,9 @@ const createDailyGameplanSchema: Schema = {
     category: {
       type: Type.ARRAY,
       items: { type: Type.STRING },
-      description: `Categories for the gameplan. Valid values: ${Object.values(GameplanCategory).join(", ")}`,
+      description: `Categories for the gameplan. Valid values: ${Object.values(
+        GameplanCategory
+      ).join(", ")}`,
     },
   },
   required: ["summary"],
@@ -428,7 +431,7 @@ export const createDailyGameplanTool = new FunctionTool({
         title,
         summary: params.summary,
         status: GameplanStatus.DRAFT,
-        priority: params.priority as GameplanStatusValue | undefined,
+        priority: params.priority as GameplanPriorityValue | undefined,
         category: categories,
         contentBlocks,
       });

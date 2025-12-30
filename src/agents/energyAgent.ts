@@ -3,7 +3,7 @@ import { Schema, Type } from "@google/genai";
 import {
   getTodayEnergySchedule,
   getEnergyScheduleForDate,
-} from "../app/api/_lib/energyStorage.js";
+} from "../app/api/_lib/storage/energyStorage.js";
 import { APP_USER_ID } from "../config/userConfig.js";
 
 // ============================================================================

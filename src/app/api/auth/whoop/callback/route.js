@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { handleCallback } from "../../../_lib/whoopAuth.js";
+import { handleCallback } from "../../../_lib/whoop/whoopAuth.js";
 
 /**
  * GET /api/auth/whoop/callback
@@ -68,5 +68,6 @@ export async function GET(request) {
     );
   }
 }
+
 
 

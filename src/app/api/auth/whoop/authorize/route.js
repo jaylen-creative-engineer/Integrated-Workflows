@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { initiateAuth } from "../../../_lib/whoopAuth.js";
+import { initiateAuth } from "../../../_lib/whoop/whoopAuth.js";
 
 /**
  * GET /api/auth/whoop/authorize

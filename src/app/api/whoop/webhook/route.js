@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { buildEnergyScheduleFromWhoop } from "../../../../energy/whoopEnergyModel.js";
-import { upsertEnergyEventsIfMissing } from "../../_lib/energyStorage.js";
-import { getAccessToken } from "../../_lib/whoopAuth.js";
-import { withWhoop } from "../../_lib/withWhoop.js";
+import { upsertEnergyEventsIfMissing } from "../../_lib/storage/energyStorage.js";
+import { getAccessToken } from "../../_lib/whoop/whoopAuth.js";
+import { withWhoop } from "../../_lib/whoop/withWhoop.js";
 import { WhoopService } from "../../../../services/whoopService.js";
-import { APP_USER_ID } from "../../../../config/userConfig.js";
+import { APP_USER_ID } from "@/config";
 
 const FAIL_OPEN_ON_STORAGE =
   (process.env.SUPABASE_ENERGY_FAIL_OPEN || "true").toLowerCase() !== "false";

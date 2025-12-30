@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { getAccessToken } from "./whoopAuth.js";
-import { WhoopService } from "../../../services/whoopService.js";
+import { WhoopService } from "../../../../services/whoopService.js";
 
 /**
  * Constant-time string comparison to prevent timing attacks
@@ -85,14 +85,14 @@ function validateWhoopSignature(request, rawBody, secret, toleranceSeconds) {
  *     // ... handler logic
  *   }, { mode: 'outbound' });
  *
- * @param {Function} handler - Route handler (request, ctx) => NextResponse
+ * @param {(request: import('next/server').NextRequest, ctx: any) => Promise<import('next/server').NextResponse>} handler - Route handler
  * @param {Object} options - Configuration options
- * @param {'inbound'|'outbound'} options.mode - 'inbound' for webhook validation, 'outbound' for OAuth (default: 'inbound')
- * @param {string} options.secretEnvVar - Environment variable name for webhook secret (default: "WHOOP_WEBHOOK_SECRET")
- * @param {number} options.toleranceSeconds - Max timestamp age in seconds for webhooks (default: 300)
- * @param {boolean} options.requireSignature - Whether to require webhook validation (default: true, inbound only)
- * @param {boolean} options.requireAuth - Whether to require valid OAuth token (default: true, outbound only)
- * @returns {Function} Wrapped handler
+ * @param {'inbound'|'outbound'} [options.mode] - 'inbound' for webhook validation, 'outbound' for OAuth (default: 'inbound')
+ * @param {string} [options.secretEnvVar] - Environment variable name for webhook secret (default: "WHOOP_WEBHOOK_SECRET")
+ * @param {number} [options.toleranceSeconds] - Max timestamp age in seconds for webhooks (default: 300)
+ * @param {boolean} [options.requireSignature] - Whether to require webhook validation (default: true, inbound only)
+ * @param {boolean} [options.requireAuth] - Whether to require valid OAuth token (default: true, outbound only)
+ * @returns {(request: import('next/server').NextRequest, ctx: any) => Promise<import('next/server').NextResponse>} Wrapped handler
  */
 export function withWhoop(handler, options = {}) {
   const {

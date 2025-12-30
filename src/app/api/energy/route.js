@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildEnergyScheduleFromWhoop } from "../../../energy/whoopEnergyModel.js";
-import { withWhoop } from "../_lib/withWhoop.js";
+import { withWhoop } from "../_lib/whoop/withWhoop.js";
 
 /**
  * POST /api/energy
