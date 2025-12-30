@@ -7,7 +7,7 @@ import {
   extractAgentOutput,
   SessionStatus,
 } from "../../_lib/storage/agentSessionStorage.js";
-import { allDomainTools, rootAgent } from "@/agents";
+import { creativeAgent, workflowsTools, energyTools } from "@/agents";
 import { APP_USER_ID } from "@/config";
 
 type RequestPayload = {
@@ -26,8 +26,11 @@ type ParsedRequest = {
 
 const DEFAULT_PROMPT =
   "Generate a daily brief with tasks, meetings, and energy map.";
-const APP_NAME = "creative-os-poc";
-const MAX_LLM_CALLS = 4;
+const APP_NAME = "creative-os";
+const MAX_LLM_CALLS = 10; // Increased to support sub-agent coordination
+
+// Combined tools for dry-run listing
+const allTools = [...workflowsTools, ...energyTools];
 
 /**
  * Parses and validates the request body, returning normalized values with defaults
@@ -78,7 +81,8 @@ function shouldSkipExecution(dryRun: boolean): {
 }
 
 /**
- * Executes the agent runner and collects all events
+ * Executes the agent runner and collects all events.
+ * Uses the hierarchical creativeAgent which coordinates wellness and workflows sub-agents.
  */
 async function executeAgent(
   prompt: string,
@@ -86,7 +90,7 @@ async function executeAgent(
   sessionId: string
 ): Promise<unknown[]> {
   const runner = new InMemoryRunner({
-    agent: rootAgent,
+    agent: creativeAgent,
     appName: APP_NAME,
   });
 
@@ -177,11 +181,15 @@ export async function POST(request: NextRequest) {
 
   const skipCheck = shouldSkipExecution(dryRun);
   if (skipCheck.skip) {
-    const tools = allDomainTools.map((tool) => tool.name);
+    const tools = allTools.map((tool) => tool.name);
     return NextResponse.json({
       status: skipCheck.status,
       reason: skipCheck.reason,
       tools,
+      architecture: {
+        topAgent: "creative_agent",
+        subAgents: ["wellness_agent", "workflows_agent"],
+      },
     });
   }
 
