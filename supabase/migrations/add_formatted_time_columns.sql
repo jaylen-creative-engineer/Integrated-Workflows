@@ -10,3 +10,4 @@ ALTER TABLE public.energy_events
 COMMENT ON COLUMN public.energy_events.start_at_formatted IS 'Human-readable formatted start time (e.g., "Saturday, December 27th 1:12PM") in US EST timezone.';
 COMMENT ON COLUMN public.energy_events.end_at_formatted IS 'Human-readable formatted end time (e.g., "Saturday, December 27th 1:12PM") in US EST timezone.';
 
+
