@@ -44,6 +44,7 @@ export interface NotionConfig {
   ideas: DatabaseConfig;
   meetings: DatabaseConfig;
   gameplans: DatabaseConfig;
+  content: DatabaseConfig;
 }
 
 export const notionConfig: NotionConfig = {
@@ -347,6 +348,87 @@ export const notionConfig: NotionConfig = {
       },
     },
   },
+
+  /**
+   * Content Database
+   * For content planning, outlines, and drafts
+   */
+  content: {
+    databaseId: "20682787-0ecb-802a-b76d-f97d4e0c5251",
+    description: "Content planning and drafts",
+    properties: {
+      title: {
+        name: "Post name",
+        type: "title",
+        description: "The content title",
+      },
+      status: {
+        name: "Status",
+        type: "status",
+        description: "Post Idea, Draft, Ready for Review, Scheduled, Published, Cancelled",
+      },
+      contentGoal: {
+        name: "Content Goal",
+        type: "select",
+        description: "Awareness, Education, Conversion, Engagement",
+      },
+      platform: {
+        name: "Platform",
+        type: "multi_select",
+        description: "Linkedin, TikTok, X, YouTube, Instagram",
+      },
+      contentType: {
+        name: "Content type",
+        type: "multi_select",
+        description: "Text, Image / photo, Video, Link, Carousel, Poll, Story, Live stream",
+      },
+      targetAudience: {
+        name: "Target Audience",
+        type: "select",
+        description: "Beginner, Intermediate, Advanced, Mixed",
+      },
+      targetAudiences: {
+        name: "Target audiences",
+        type: "multi_select",
+        description: "Segment 1, Segment 2, Segment 3",
+      },
+      postDate: {
+        name: "Post date",
+        type: "date",
+        description: "Scheduled or published date",
+      },
+      strategicIntent: {
+        name: "Strategic Intent",
+        type: "rich_text",
+        description: "Strategic intent for the content",
+      },
+      editorInstructions: {
+        name: "Editor Instructions",
+        type: "rich_text",
+        description: "Instructions for editing",
+      },
+      successMetrics: {
+        name: "Success Metrics",
+        type: "rich_text",
+        description: "Success metrics for the content",
+      },
+      editingWorkflow: {
+        name: "Editing Workflow",
+        type: "select",
+        description: "Educational, Motivational, Tutorial, Conceptual",
+      },
+      postUrl: {
+        name: "Post URL",
+        type: "url",
+        description: "URL to published content",
+      },
+      owner: {
+        name: "Owner",
+        type: "people",
+        description: "Content owner",
+      },
+    },
+  },
 };
 
 /**
@@ -491,3 +573,90 @@ export const GameplanPriority = {
 
 export type GameplanPriorityValue =
   (typeof GameplanPriority)[keyof typeof GameplanPriority];
+
+// ============================================================================
+// Content Domain Types & Constants
+// ============================================================================
+
+/**
+ * Valid status values for Content (status property)
+ */
+export const ContentStatus = {
+  POST_IDEA: "Post Idea",
+  DRAFT: "Draft",
+  READY_FOR_REVIEW: "Ready for Review",
+  SCHEDULED: "Scheduled",
+  PUBLISHED: "Published",
+  CANCELLED: "Cancelled",
+} as const;
+
+export type ContentStatusValue =
+  (typeof ContentStatus)[keyof typeof ContentStatus];
+
+/**
+ * Valid content goal values for Content (select property)
+ */
+export const ContentGoal = {
+  AWARENESS: "Awareness",
+  EDUCATION: "Education",
+  CONVERSION: "Conversion",
+  ENGAGEMENT: "Engagement",
+} as const;
+
+export type ContentGoalValue = (typeof ContentGoal)[keyof typeof ContentGoal];
+
+/**
+ * Valid platform values for Content (multi_select property)
+ */
+export const ContentPlatform = {
+  LINKEDIN: "Linkedin",
+  TIKTOK: "TikTok",
+  X: "X",
+  YOUTUBE: "YouTube",
+  INSTAGRAM: "Instagram",
+} as const;
+
+export type ContentPlatformValue =
+  (typeof ContentPlatform)[keyof typeof ContentPlatform];
+
+/**
+ * Valid content type values for Content (multi_select property)
+ */
+export const ContentType = {
+  TEXT: "Text",
+  IMAGE_PHOTO: "Image / photo",
+  VIDEO: "Video",
+  LINK: "Link",
+  CAROUSEL: "Carousel",
+  POLL: "Poll",
+  STORY: "Story",
+  LIVE_STREAM: "Live stream",
+} as const;
+
+export type ContentTypeValue = (typeof ContentType)[keyof typeof ContentType];
+
+/**
+ * Valid target audience values for Content (select property)
+ */
+export const ContentTargetAudience = {
+  BEGINNER: "Beginner",
+  INTERMEDIATE: "Intermediate",
+  ADVANCED: "Advanced",
+  MIXED: "Mixed",
+} as const;
+
+export type ContentTargetAudienceValue =
+  (typeof ContentTargetAudience)[keyof typeof ContentTargetAudience];
+
+/**
+ * Valid editing workflow values for Content (select property)
+ */
+export const ContentEditingWorkflow = {
+  EDUCATIONAL: "Educational",
+  MOTIVATIONAL: "Motivational",
+  TUTORIAL: "Tutorial",
+  CONCEPTUAL: "Conceptual",
+} as const;
+
+export type ContentEditingWorkflowValue =
+  (typeof ContentEditingWorkflow)[keyof typeof ContentEditingWorkflow];
