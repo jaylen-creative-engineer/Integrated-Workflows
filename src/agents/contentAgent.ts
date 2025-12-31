@@ -1,12 +1,13 @@
 import { FunctionTool } from "@google/adk";
 import { LlmAgent } from "@google/adk";
 import { Schema, Type } from "@google/genai";
-import { getPageBlocksAsText } from "../services/notionService.js";
 import {
+  getPageBlocksAsText,
   createContent,
   queryContent,
   type CreateContentInput,
-} from "../services/notionService.js";
+} from "../services/notion/index.js";
+import type { CreatePageParameters } from "@notionhq/client/build/src/api-endpoints.js";
 import {
   ContentStatus,
   ContentPlatform,
@@ -14,6 +15,12 @@ import {
   ContentGoal,
   ContentTargetAudience,
   ContentEditingWorkflow,
+  type ContentStatusValue,
+  type ContentGoalValue,
+  type ContentPlatformValue,
+  type ContentTypeValue,
+  type ContentTargetAudienceValue,
+  type ContentEditingWorkflowValue,
 } from "../config/notionConfig.js";
 import { visionTools } from "./visionAgent.js";
 
@@ -508,7 +515,7 @@ export const saveContentEntryTool = new FunctionTool({
         : undefined;
 
       // Build content blocks if outline provided
-      const contentBlocks = outline
+      const contentBlocks: CreatePageParameters["children"] | undefined = outline
         ? [
             {
               object: "block",
@@ -524,7 +531,7 @@ export const saveContentEntryTool = new FunctionTool({
                 rich_text: [{ type: "text", text: { content: outline } }],
               },
             },
-          ]
+          ] as CreatePageParameters["children"]
         : undefined;
 
       const contentInput: CreateContentInput = {

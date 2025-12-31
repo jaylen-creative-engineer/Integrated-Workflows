@@ -7,7 +7,7 @@ import {
   normalizeMeetingResponse,
   getTodaysMeetings,
   getUpcomingMeetings,
-} from "../services/notionService.js";
+} from "../services/notion/index.js";
 
 // ============================================================================
 // Query Meetings for a Day

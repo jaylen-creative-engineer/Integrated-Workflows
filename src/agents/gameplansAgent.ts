@@ -7,7 +7,7 @@ import {
   getGameplanForDate,
   appendGameplanContent,
   type GameplanResponse,
-} from "../services/notionService.js";
+} from "../services/notion/index.js";
 import {
   GameplanStatus,
   GameplanCategory,

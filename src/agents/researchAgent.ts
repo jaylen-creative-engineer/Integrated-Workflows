@@ -3,10 +3,7 @@ import { LlmAgent } from "@google/adk";
 import { Schema, Type } from "@google/genai";
 import type { CreatePageParameters } from "@notionhq/client";
 import { searchAgent } from "./searchAgent.js";
-import {
-  createIdea,
-  createGameplan,
-} from "../services/notionService.js";
+import { createIdea, createGameplan } from "../services/notion/index.js";
 import { IdeaTags, IdeaStatus } from "../config/notionConfig.js";
 
 // ============================================================================
@@ -260,7 +257,8 @@ export const extractAndSummarizeContent = new FunctionTool({
         // PDF handling - would need pdf-parse library
         return {
           status: "error",
-          error: "PDF extraction not yet implemented. Please provide HTML content.",
+          error:
+            "PDF extraction not yet implemented. Please provide HTML content.",
           url: fetchUrl,
         };
       } else {
@@ -584,11 +582,7 @@ You are the Research Agent. You help conduct market research for ideas by search
 - "Create research path for [topic]" → gather findings → create structured document
 `,
   subAgents: [searchAgent],
-  tools: [
-    extractAndSummarizeContent,
-    saveResearchFinding,
-    createResearchPath,
-  ],
+  tools: [extractAndSummarizeContent, saveResearchFinding, createResearchPath],
 });
 
 // ============================================================================
@@ -600,4 +594,3 @@ export const researchTools = [
   saveResearchFinding,
   createResearchPath,
 ];
-

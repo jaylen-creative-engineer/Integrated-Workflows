@@ -1,6 +1,6 @@
 import { FunctionTool } from "@google/adk";
 import { Schema, Type } from "@google/genai";
-import { getPageBlocksAsText } from "../services/notionService.js";
+import { getPageBlocksAsText } from "../services/notion/index.js";
 
 // ============================================================================
 // Constants

@@ -9,7 +9,7 @@ import {
   getIdeasByStatus,
   createProject,
   type IdeaResponse,
-} from "../services/notionService.js";
+} from "../services/notion/index.js";
 import {
   IdeaStatus,
   IdeaTags,

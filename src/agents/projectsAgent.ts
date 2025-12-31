@@ -5,7 +5,7 @@ import {
   updatePage,
   queryProjects,
   extractPropertyValue,
-} from "../services/notionService.js";
+} from "../services/notion/index.js";
 import { notionConfig } from "../config/notionConfig.js";
 
 type BriefParams = {
