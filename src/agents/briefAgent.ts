@@ -1,5 +1,4 @@
 import { LlmAgent } from "@google/adk";
-import { workflowsAgent } from "./workflowsAgent.js";
 import { gameplansTools } from "./gameplansAgent.js";
 import { visionTools } from "./visionAgent.js";
 import { projectsTools } from "./projectsAgent.js";
@@ -16,7 +15,7 @@ import { generateTasksFromBrief } from "./tasksAgent.js";
  * - Product brief creation with vision checks
  * - Task generation from product briefs
  *
- * Delegates to WorkflowsAgent for execution tools (meetings, ideas, task queries).
+ * Can delegate to workflows_agent (via creative_agent) for execution tools (meetings, ideas, task queries).
  */
 export const briefAgent = new LlmAgent({
   name: "brief_agent",
@@ -44,13 +43,19 @@ You are the Brief Agent. Create concise briefs (daily/weekly/quarterly) and stra
 - State how energy shaped the plan.
 
 ## Brief Workflows
-- Daily: get_yearly_vision → query_product_briefs → [delegate to workflows_agent: get_tasks_for_brief, get_todays_meetings] → create_daily_gameplan.
-- Weekly: get_yearly_vision → query_product_briefs → [delegate: get_tasks_for_brief, get_meetings_by_date_range] → create_daily_gameplan (weekly review flavor).
+- Daily: get_yearly_vision → query_product_briefs → [request creative_agent to route to workflows_agent for: get_tasks_for_brief, get_todays_meetings] → create_daily_gameplan.
+- Weekly: get_yearly_vision → query_product_briefs → [request creative_agent to route to workflows_agent for: get_tasks_for_brief, get_meetings_by_date_range] → create_daily_gameplan (weekly review flavor).
 - Quarterly: get_yearly_vision → query_product_briefs → create_daily_gameplan (quarterly planning flavor).
 - Product briefs: get_yearly_vision → create_product_brief → generate_tasks_from_brief.
 
-## Delegation
-- Delegate to workflows_agent for ideas, meetings, and task queries.
+## Getting Workflow Data
+When you need tasks, meetings, or ideas data:
+- Request creative_agent (your parent) to route to workflows_agent
+- Specify what you need: tasks for a brief, today's meetings, ideas, etc.
+- creative_agent will fetch the data from workflows_agent and return it to you
+- Use the returned data to complete your gameplan/brief
+
+## Direct Capabilities
 - Handle directly: gameplans, product briefs (create/query), task generation, strategic guidance, vision alignment.
 
 ## Tools
@@ -64,7 +69,7 @@ You are the Brief Agent. Create concise briefs (daily/weekly/quarterly) and stra
 - Show vision alignment explicitly.
 - Provide clear next actions and priorities.
 `,
-  subAgents: [workflowsAgent],
+  subAgents: [],
   tools: [
     ...gameplansTools,
     ...visionTools,

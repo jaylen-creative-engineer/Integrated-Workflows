@@ -9,6 +9,8 @@ export { creativeAgent } from "./creativeAgent.js";
 export { briefAgent, briefTools } from "./briefAgent.js";
 export { wellnessAgent } from "./wellnessAgent.js";
 export { workflowsAgent, workflowsTools } from "./workflowsAgent.js";
+export { researchAgent } from "./researchAgent.js";
+export { searchAgent } from "./searchAgent.js";
 
 // ============================================================================
 // Domain Tool Exports
@@ -26,3 +28,6 @@ export { visionTools } from "./visionAgent.js";
 export { ideasTools } from "./ideasAgent.js";
 export { meetingsTools } from "./meetingsAgent.js";
 export { tasksTools } from "./tasksAgent.js";
+
+// Research domain
+export { researchTools } from "./researchAgent.js";
